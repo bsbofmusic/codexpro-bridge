@@ -1,0 +1,19 @@
+{
+  "name": "codexpro-bridge",
+  "version": "0.1.0",
+  "description": "Route non-trivial work across CodexPro and CodexPro Bridge connections.",
+  "author": {
+    "name": "CodexPro Bridge contributors"
+  },
+  "skills": "./skills/",
+  "apps": "./.app.json",
+  "interface": {
+    "displayName": "CodexPro Bridge",
+    "shortDescription": "Route work through CodexPro and Hermes capabilities.",
+    "longDescription": "A workflow plugin that combines a CodexPro connection with CodexPro Bridge.",
+    "developerName": "CodexPro Bridge contributors",
+    "category": "Productivity",
+    "capabilities": [],
+    "defaultPrompt": "Route this non-trivial task through the appropriate CodexPro Bridge workflow."
+  }
+}

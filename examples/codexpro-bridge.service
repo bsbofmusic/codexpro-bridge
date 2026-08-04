@@ -1,0 +1,22 @@
+[Unit]
+Description=CodexPro Bridge MCP server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=codexpro-bridge
+Group=codexpro-bridge
+WorkingDirectory=/opt/codexpro-bridge
+EnvironmentFile=/etc/codexpro-bridge.env
+Environment=PYTHONPATH=/opt/hermes
+ExecStart=/opt/codexpro-bridge/.venv/bin/codexpro-bridge
+Restart=always
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+
+[Install]
+WantedBy=multi-user.target

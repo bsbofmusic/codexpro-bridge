@@ -1,0 +1,10 @@
+{
+  "apps": {
+    "codexpro": {
+      "id": "__CODEXPRO_CONNECTION_ID__"
+    },
+    "bridge": {
+      "id": "__CODEXPRO_BRIDGE_CONNECTION_ID__"
+    }
+  }
+}
