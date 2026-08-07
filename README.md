@@ -24,6 +24,14 @@ stay isolated from VPS operations.
 The Bridge does not provide file editing, shell access, Docker, systemd, or
 root operations. Those belong to the separate CodexPro connection.
 
+## ChatGPT surface
+
+Use CodexPro and CodexPro Bridge from ordinary **Chat**, not **Work**. They are
+MCP applications and do not need Work quota. If an application detail page's
+`Try in chat` action opens `?surface=work`, switch the surface selector to
+**Chat before sending**. A Work quota warning is not a CodexPro or Bridge
+outage. See [docs/troubleshooting.md](docs/troubleshooting.md).
+
 ## Requirements
 
 - Python 3.12 or newer.
@@ -96,6 +104,7 @@ product for mutating operations.
 - docs/configuration.md - environment variables and deployment boundary.
 - docs/capability-contract.md - fixed public MCP tools.
 - docs/plugin.md - two-connection Plugin installation.
+- docs/troubleshooting.md - ChatGPT surface, connection, transport, and tool diagnostics.
 - docs/development.md - tests and local development.
 - docs/security.md - redaction and secret boundaries.
 - docs/known-limitations.md - current operational limits.
