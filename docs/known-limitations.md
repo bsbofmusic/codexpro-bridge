@@ -1,5 +1,8 @@
 # Known Limitations
 
+- ChatGPT application detail pages may open `Try in chat` on the Work surface.
+  The Bridge cannot change that product-side navigation. Switch to ordinary
+  Chat before sending; Work quota is unrelated to MCP availability.
 - Hermes integration depends on implementation APIs, not a stable public Python
   SDK. Review compatibility information and run a staging smoke after a Hermes
   upgrade.

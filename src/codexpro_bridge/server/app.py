@@ -14,6 +14,7 @@ from mcp.server.transport_security import TransportSecuritySettings
 from mcp.types import ToolAnnotations
 from starlette.responses import JSONResponse, PlainTextResponse
 
+from codexpro_bridge import __version__
 from codexpro_bridge.capabilities import CapabilityRegistry, ModuleDescriptor
 from codexpro_bridge.core.config import BridgeConfig
 from codexpro_bridge.core.errors import BridgeError
@@ -65,7 +66,7 @@ class BridgeCapabilities:
         self.registry.register(
             ModuleDescriptor(
                 module_id="hermes_skills",
-                version="0.1.0",
+                version=__version__,
                 tools=(
                     "codexpro_bridge_route_and_recall",
                     "codexpro_bridge_skills_list",
@@ -91,7 +92,7 @@ class BridgeCapabilities:
         self.registry.register(
             ModuleDescriptor(
                 module_id="bridge_doctor",
-                version="0.1.0",
+                version=__version__,
                 tools=("codexpro_bridge_doctor",),
                 health=lambda: {"ok": True},
             )
@@ -202,7 +203,7 @@ def build_server(config: BridgeConfig | None = None) -> tuple[FastMCP, BridgeCap
         json_response=True,
         transport_security=TransportSecuritySettings(enable_dns_rebinding_protection=False),
     )
-    server._mcp_server.version = "0.1.0"
+    server._mcp_server.version = __version__
 
     @server.tool(
         name="codexpro_bridge_route_and_recall",

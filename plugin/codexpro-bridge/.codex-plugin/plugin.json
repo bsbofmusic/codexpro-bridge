@@ -1,6 +1,6 @@
 {
   "name": "codexpro-bridge",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Route non-trivial work across CodexPro and CodexPro Bridge connections.",
   "author": {
     "name": "CodexPro Bridge contributors"
@@ -14,6 +14,6 @@
     "developerName": "CodexPro Bridge contributors",
     "category": "Productivity",
     "capabilities": [],
-    "defaultPrompt": "Route this non-trivial task through the appropriate CodexPro Bridge workflow."
+    "defaultPrompt": "Use ordinary Chat, never Work, and route this non-trivial task through the appropriate CodexPro Bridge workflow."
   }
 }

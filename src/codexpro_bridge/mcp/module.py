@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from codexpro_bridge import __version__
 from codexpro_bridge.core.config import BridgeConfig
 from codexpro_bridge.core.errors import BridgeError
 
@@ -13,7 +14,7 @@ from .runtime import HermesMcpRuntime
 
 class HermesMcpModule:
     module_id = "hermes_mcp"
-    version = "0.1.0"
+    version = __version__
 
     def __init__(self, config: BridgeConfig, runtime: HermesMcpRuntime | None = None):
         self.runtime = runtime or HermesMcpRuntime(config)

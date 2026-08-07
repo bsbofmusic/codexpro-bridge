@@ -17,3 +17,11 @@ dist/
 .ai-bridge/
 receipts/
 *.log
+*.pem
+*.key
+*.p12
+*.pfx
+secrets/
+**/secrets/
+cloudflared/credentials.json
+**/cloudflared/credentials.json

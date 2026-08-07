@@ -25,8 +25,9 @@ def test_bootstrap_skill_is_the_only_bundled_skill_and_front_loads_routing() -> 
     assert [path.name for path in skills] == ["codexpro-bridge-router"]
     assert metadata["name"] == "codexpro-bridge-router"
     description = str(metadata["description"])
-    assert description.startswith("Use for every non-trivial task")
-    assert "ordinary chat" in description
+    assert description.startswith("Use in ordinary Chat for every non-trivial task")
+    assert "ordinary chat" in description.casefold()
+    assert "never use work" in description.casefold()
     assert "codexpro_bridge_route_and_recall" in text
     assert "codexpro_bridge_load_skill" in text
     assert (
@@ -41,3 +42,6 @@ def test_bootstrap_skill_keeps_implicit_invocation_enabled() -> None:
     metadata = yaml.safe_load((SKILL_ROOT / "agents" / "openai.yaml").read_text())
 
     assert metadata["policy"].get("allow_implicit_invocation") is True
+    prompt = metadata["interface"]["default_prompt"].casefold()
+    assert "ordinary chat" in prompt
+    assert "never use work" in prompt

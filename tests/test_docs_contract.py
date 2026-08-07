@@ -12,6 +12,7 @@ REQUIRED_DOCS = {
     "configuration.md",
     "capability-contract.md",
     "plugin.md",
+    "troubleshooting.md",
     "development.md",
     "security.md",
     "known-limitations.md",
@@ -68,6 +69,18 @@ def test_public_docs_fix_the_core_safety_boundaries() -> None:
     assert "sampling.enabled=false" in security
     assert "elicitation.enabled=false" in security
     assert "delivery_unknown" in contract
+
+
+def test_public_docs_route_apps_through_chat_not_work() -> None:
+    plugin = (DOCS / "plugin.md").read_text(encoding="utf-8").casefold()
+    troubleshooting = (DOCS / "troubleshooting.md").read_text(
+        encoding="utf-8"
+    ).casefold()
+
+    for text in (plugin, troubleshooting):
+        assert "ordinary **chat**" in text
+        assert "work quota" in text
+        assert "surface=work" in text
 
 
 def test_human_readable_public_files_contain_no_secret_values() -> None:
