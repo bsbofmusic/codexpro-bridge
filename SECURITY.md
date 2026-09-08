@@ -1,19 +1,7 @@
-# Security policy
+# Security
 
-## Reporting a vulnerability
+This repository is archived and no longer ships an installable CodexPro Bridge runtime or ChatGPT Plugin/App manifest.
 
-Please use GitHub private vulnerability reporting for this repository. Do not
-open a public issue containing credentials, authenticated URLs, private MCP
-configuration, or details that would expose a live deployment.
+Do not use historical 0.1.x files from Git history to create a current Bridge connection. Those releases contain an obsolete eight-tool application schema and are retained for archaeology only.
 
-## Deployment boundary
-
-CodexPro Bridge is intended to listen on loopback and sit behind an
-authenticated HTTPS proxy or tunnel. Use a dedicated random Bridge token and
-keep Hermes, CodexPro, Cloudflare, SSH, and other credentials out of this
-repository and out of process arguments.
-
-The generic Hermes MCP call tool can invoke upstream tools with side effects.
-Its effective authority is exactly the authority granted by the deployer's
-Hermes MCP configuration. Review that configuration and require confirmation
-for mutating tools in the calling product.
+For a current deployment, treat the live MCP endpoint's authenticated `initialize` + `tools/list` response as the schema authority. Never copy deployment tokens, connection IDs, credentials, or private runtime configuration into this archived repository.
