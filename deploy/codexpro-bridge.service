@@ -1,0 +1,28 @@
+[Unit]
+Description=CodexPro Bridge MCP (Skills + AgentGateway + Shared Memory)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/gpt-workspace/codexpro-bridge
+Environment=HOME=/home/agent
+Environment=PATH=/home/agent/.local/bin:/usr/local/bin:/usr/bin:/bin
+Environment=CODEXPRO_BRIDGE_HOST=127.0.0.1
+Environment=CODEXPRO_BRIDGE_PORT=18787
+Environment=CODEXPRO_BRIDGE_SKILLS_ROOT=/home/agent/.skills-manager/skills
+Environment=CODEXPRO_BRIDGE_MCP_URL=http://127.0.0.1:19090/mcp
+Environment=CODEXPRO_BRIDGE_MCP_OPTIONAL_URLS=http://127.0.0.1:19094/mcp
+Environment=PYTHONDONTWRITEBYTECODE=1
+EnvironmentFile=/home/agent/.config/codexpro-bridge/env
+ExecStart=/opt/gpt-workspace/codexpro-bridge/.venv/bin/python -m codexpro_bridge.server.app
+Restart=always
+RestartSec=3s
+TimeoutStopSec=30s
+KillMode=control-group
+UMask=0077
+NoNewPrivileges=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+
+[Install]
+WantedBy=default.target

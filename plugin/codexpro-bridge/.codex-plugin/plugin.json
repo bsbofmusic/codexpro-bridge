@@ -1,0 +1,19 @@
+{
+  "name": "codexpro-bridge",
+  "version": "2.1.0",
+  "description": "Route non-trivial work through shared Skills, MCP tools, direct shared memory, and lightweight durable work state.",
+  "author": {
+    "name": "CodexPro Bridge"
+  },
+  "skills": "./skills/",
+  "apps": "./.app.json",
+  "interface": {
+    "displayName": "CodexPro Bridge",
+    "shortDescription": "Use shared Skills, MCP tools, and memory naturally.",
+    "longDescription": "A personal workflow plugin for Skills Manager, AgentGateway, direct Obsidian/MemOS memory, and the separate CodexPro workspace connection.",
+    "developerName": "CodexPro Bridge",
+    "category": "Productivity",
+    "capabilities": [],
+    "defaultPrompt": "Route this non-trivial task through the appropriate shared Skill, MCP, and memory workflow."
+  }
+}

@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "codexpro-bridge"
+version = "2.1.0"
+description = "Standalone MCP bridge for shared Skills Manager, AgentGateway, Obsidian and MemOS capabilities"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+  "mcp==2.0.0",
+  "PyYAML==6.0.3",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest==9.0.2",
+]
+
+[project.scripts]
+codexpro-bridge = "codexpro_bridge.server.app:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"

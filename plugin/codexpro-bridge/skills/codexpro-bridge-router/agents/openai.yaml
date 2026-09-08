@@ -1,0 +1,6 @@
+interface:
+  display_name: "CodexPro Bridge Router"
+  short_description: "Route non-trivial work through the intended connection"
+  default_prompt: "Use $codexpro-bridge-router to route this task before acting."
+policy:
+  allow_implicit_invocation: true
