@@ -1,0 +1,25 @@
+[Unit]
+Description=Cloudflare tunnel for CodexPro Bridge MCP
+After=network-online.target codexpro-bridge.service
+Wants=network-online.target codexpro-bridge.service
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/gpt-workspace/codexpro-bridge
+Environment=HOME=/home/agent
+Environment=PATH=/home/agent/.local/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=/home/agent/.local/bin/cloudflared tunnel run --token-file /home/agent/.config/codexpro-bridge/tunnel-token
+Restart=always
+RestartSec=5s
+TimeoutStopSec=30s
+KillMode=control-group
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadOnlyPaths=/home/agent/.config/codexpro-bridge/tunnel-token /home/agent/.local/bin/cloudflared
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+
+[Install]
+WantedBy=default.target
