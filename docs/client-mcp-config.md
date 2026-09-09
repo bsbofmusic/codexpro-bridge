@@ -9,7 +9,7 @@ For a client whose remote-MCP JSON uses `type: "http"`:
 ```json
 {
   "type": "http",
-  "url": "https://<CODEXPRO_HOST>/mcp",
+  "url": "https://codexpro.cosymart.top/mcp",
   "headers": {
     "Authorization": "Bearer <CODEXPRO_HTTP_TOKEN>"
   }
@@ -21,7 +21,7 @@ For a client whose remote-MCP JSON uses `type: "http"`:
 ```json
 {
   "type": "http",
-  "url": "https://<CODEXPRO_BRIDGE_HOST>/mcp",
+  "url": "https://codexpro-bridge.cosymart.top/mcp",
   "headers": {
     "Authorization": "Bearer <CODEXPRO_BRIDGE_HTTP_TOKEN>"
   }

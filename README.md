@@ -1,133 +1,67 @@
 # CodexPro Bridge
 
-CodexPro Bridge is a thin ChatGPT-facing MCP adapter for a shared agent stack. It gives ChatGPT a small, stable public surface while lazily reaching the live Skills Manager library, AgentGateway MCP tools, Obsidian/MemOS memory, and a lightweight Work Runtime only when a task needs them.
+CodexPro Bridge is the thin ChatGPT-facing command bus for the VPS shared agent stack. The active 3.1.2 runtime is Go and deploys as one stripped binary; shared data and execution remain owned by their existing systems.
 
-Current runtime release: **2.1.1**.
+## Runtime
 
-## Design goal
+- Production runtime: Go 1.27.1
+- MCP SDK: `github.com/modelcontextprotocol/go-sdk` v1.7.0
+- SQLite: pure-Go `modernc.org/sqlite`, `CGO_ENABLED=0`
+- Production binary: `/home/agent/.local/bin/codexpro-bridge`
+- Listener: `127.0.0.1:18787`
+- Public MCP: `https://codexpro-bridge.cosymart.top/mcp`
+- Work DB: `/home/agent/.local/share/codexpro-bridge/work-runtime.sqlite3`
+- Dynamic provider config: `/home/agent/.config/codexpro-bridge/providers.env`
 
-Bridge is intentionally a small high-output command bus, not a second autonomous agent platform.
+The Go 3.0 migration preserved the Python 2.1.1 public MCP contract. Bridge 3.1 keeps those original 13 tool contracts unchanged, adds one deterministic Web Accelerator dispatcher, and upgrades Work Runtime from schema 1 to schema 2 through an additive migration. Python is no longer on the active service path and is retained only in bounded rollback snapshots.
 
-```text
-ChatGPT
-  ↓
-CodexPro Bridge
-  ├─ Skills Manager      → route + load selected Skills on demand
-  ├─ AgentGateway        → discover + call shared MCP tools on demand
-  ├─ Obsidian / MemOS    → recall shared memory only when continuity matters
-  └─ Work Runtime        → durable task/checkpoint/audit/artifact state
+## Responsibilities
 
-Official CodexPro / CyberKate
-  └─ files, Bash, Git, tests, deployment and other workspace execution
-```
+- Read enabled Skills live from Skills Manager at `/home/agent/.skills-manager/skills`.
+- Dynamically list and call shared MCP tools through AgentGateway Core and optional isolated AgentGateway endpoints.
+- Expose direct shared memory through full-permission Obsidian and MemOS MCP dispatchers without creating another memory store.
+- Keep ChatGPT-facing routing lightweight: `route_and_recall` first for non-trivial work, then load only the selected Skill/tool schema/context on demand.
+- Maintain lightweight durable Work state for tasks, checkpoints, project context references, mechanical audits, operation receipts, result references, and Resume Capsules without becoming an execution plane.
+- Provide bounded deterministic Web acceleration: conversation/task affinity, no-replay receipts, result shaping and limited read-only parallel MCP fan-out.
+- Mount built-in and future capability systems through a provider-neutral thin Adapter contract instead of adding system-specific server switches. Adapters may map protocols, normalize results, expose health, and manage lifecycle; they do not own planning, scheduling, AI reasoning, workflow state, or a second data plane.
+- Keep file, Bash, Git, repository inspection, edits, deployments, browser execution, and agent orchestration in their existing owner systems.
 
-Bridge owns no second Skill library, MCP registry, memory database, scheduler, browser runner, or general execution engine.
+## Capability modules
 
-## Progressive-disclosure usage
+The public MCP surface is derived from enabled capability modules; there is no fixed global tool-count contract. Built-in modules are:
 
-The bundled `codexpro-bridge-router` Skill keeps the default path short:
+1. `shared_skills`
+2. `shared_mcp`
+3. `shared_memory`
+4. `work_runtime`
+5. `web_accelerator`
+6. `bridge_doctor`
 
-1. **Ordinary one-shot questions stay ordinary.** No Work task, memory search, or MCP inventory just because Bridge is installed.
-2. **Non-trivial tasks route first.** Load one PRIMARY Skill; add at most one SECONDARY only when the task genuinely crosses owners.
-3. **Memory is continuity-triggered.** Use it for “continue / previous / remember / compare with earlier work” style tasks, not every new prompt.
-4. **Work is lifecycle-triggered.** Use it for explicit TODO execution, durable multi-step tasks, checkpoint/resume, project context, mechanical audit, artifact tracking, and completion state.
-5. **MCP is capability-triggered.** Query AgentGateway narrowly and call the exact upstream tool only when the task needs it.
-6. **Work records state; executors do the work.** Files, Bash, Git, tests and deployment remain in official CodexPro/CyberKate; external-system actions remain with their upstream MCP. Results and evidence are written back to Work.
+Every module is mounted through the same provider-neutral Adapter contract (`Descriptor`, tool definitions, explicit operations, health). Descriptor metadata includes module kind, dependencies and descriptive traits. Future systems such as Vision should attach through a thin adapter rather than by modifying the Bridge server core or existing runtime packages.
 
-This keeps Bridge fast and composable without turning it into a heavyweight orchestration layer.
+`CODEXPRO_BRIDGE_MODULES` can enable a selected comma-separated module set. Unset, empty, `*`, `all`, or `auto` enables the registered catalog. Unknown module IDs and missing declared dependencies fail closed. After a module change, restart only Bridge and refresh MCP clients so their cached schema matches the live manifest.
 
-## 2.1 capabilities
+The release invariant is `actual tools == union(enabled module tools)` with zero missing/orphan tools. Tool count is telemetry. See [docs/module-surface-governance.md](docs/module-surface-governance.md).
 
-### Shared Skills
+## Ownership
 
-- Route non-trivial work against the live Skills Manager catalog.
-- Load only the selected `SKILL.md` and referenced resources when needed.
-- No copied Skill index inside Bridge.
+Bridge owns no shared Skill, MCP, Memory, or workspace data. Skills Manager owns Skill membership/content. AgentGateway owns shared general MCP routing. Obsidian is the readable/cutover memory source and MemOS is its derived retrieval service. Official CodexPro owns workspace execution. Bridge owns only its lightweight Work Runtime state.
 
-### Shared MCP
+## Reliability model
 
-- Discover and invoke AgentGateway Core/XYDC tools through a small dispatcher.
-- Dynamic upstream tools remain behind the dispatcher instead of being re-exported as hundreds of ChatGPT actions.
-- Bridge does not add a second permission database or silently downgrade upstream permissions.
+Bridge→AgentGateway uses short-lived request/response MCP sessions. The Go client disables standalone SSE and reconnects, closes each session deterministically, and never replays a call after delivery becomes uncertain. Outbound MCP calls start from a clean context and inherit only the tighter caller deadline, preventing inbound transport/session metadata from leaking into another MCP peer. Resource convergence after repeated list/call/batch/doctor traffic is a release gate.
 
-### Shared memory
+The public Bridge server is stateless. It binds loopback only and sits behind the authenticated Cloudflare Tunnel. Because the tunnel connects from loopback while preserving the public Host header, Go SDK localhost Host-header protection is explicitly disabled; Bridge's own `/mcp` token authentication remains mandatory.
 
-- Direct search/list/call access to Obsidian and MemOS MCP surfaces.
-- Memory consumption is independent from Skill matching.
-- Bridge creates no additional memory ingest, sync, or backup path.
-
-### Work Runtime
-
-One public dispatcher covers:
-
-- task lifecycle + ordered steps;
-- immutable checkpoints and state-only resume;
-- project context references;
-- deterministic PASS / FAIL / UNCERTAIN mechanical audits;
-- artifact references and verification metadata.
-
-A PASS audit is bound to the task revision it inspected. Material task/step/artifact changes make that PASS stale, preventing false completion.
-
-### Modular public surface
-
-Public tools are derived from enabled capability modules. The release contract is:
-
-- actual tools equal the union declared by enabled modules;
-- `missing_tools=[]`;
-- `orphan_tools=[]`;
-- `surface.consistent=true`;
-- duplicate module IDs/tool names fail closed.
-
-Tool count is telemetry, **not** a permanent compatibility contract.
-
-## Repository and live-runtime roles
-
-This repository is the **versioned source, documentation and release history** for CodexPro Bridge.
-
-The live MCP endpoint remains the authority for the schema that a running client should see. Clients should initialize MCP and use live `tools/list` / Bridge doctor output rather than copying a static tool list from README or an old release.
-
-To prevent the stale-registration problem that affected the historical 0.1.x line:
-
-- real `.app.json` files are ignored and never committed;
-- connection IDs and authentication tokens are never committed;
-- deployment-specific secrets/config stay outside the repository;
-- a client must refresh/reconnect after module-surface changes so cached schemas are replaced.
-
-## Source layout
-
-```text
-src/codexpro_bridge/       runtime
-plugin/codexpro-bridge/    bundled bootstrap Skill + plugin template
-scripts/                   smoke/manifest helpers
-tests/                     regression and contract tests
-docs/                      architecture, operations and Work Runtime docs
-deploy/                    service templates
-```
-
-## Development
-
-Python 3.12+ is required.
-
-```bash
-python -m venv .venv
-. .venv/bin/activate
-pip install -e '.[dev]'
-pytest -q
-```
-
-Before a release, also verify the live deployment separately: loopback/public MCP surfaces must agree, deep doctor must pass, and the client-visible schema must match the enabled-module manifest.
+Bridge 3.1.2 also treats process survival as a fault-domain contract: authenticated MCP request bodies are bounded (4 MiB default), HTTP header/idle time is bounded, the Go runtime has a soft 128 MiB memory budget, and the systemd cgroup has separate memory/swap/task/file-descriptor ceilings well above measured production pressure peaks. `cmd/bridge-stress` provides a read-only authenticated MCP pressure probe; shared-MCP failures may degrade requests but must not restart Bridge or leave persistent AgentGateway child-process growth.
 
 ## Documentation
 
-Start with:
-
-- [`docs/bridge-v2-blueprint.md`](docs/bridge-v2-blueprint.md)
-- [`docs/bridge-v2.1-work-runtime-blueprint.md`](docs/bridge-v2.1-work-runtime-blueprint.md)
-- [`docs/module-surface-governance.md`](docs/module-surface-governance.md)
-- [`docs/operations.md`](docs/operations.md)
-- [`docs/security-and-secrets.md`](docs/security-and-secrets.md)
-- [`CHANGELOG.md`](CHANGELOG.md)
-
-## Historical note
-
-The public 0.1.x line used an obsolete fixed eight-tool registration model. It was deliberately decommissioned on 2026-09-08 to stop stale ChatGPT registrations from being recreated. The current 2.x design replaces that model with module-derived live schema discovery and progressive disclosure.
+- [Go 3.1 release receipt](docs/bridge-v3.1-go-release-receipt.md)
+- [Go 3.0 migration plan](docs/bridge-v3-go-migration-plan.md)
+- [Go 3.0.1 release receipt](docs/bridge-v3.0.1-go-release-receipt.md)
+- [Architecture](docs/architecture.md)
+- [Operations](docs/operations.md)
+- [Deployment and rollback](docs/deployment-and-rollback.md)
+- [Testing and evals](docs/testing-and-evals.md)
+- Historical 2.x contracts and receipts remain under `docs/` for rollback archaeology.

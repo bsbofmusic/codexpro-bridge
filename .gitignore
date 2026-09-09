@@ -1,13 +1,9 @@
-.venv/
-__pycache__/
-*.pyc
+bin/
+.codegraph/
 node_modules/
 dist/
 build/
 coverage/
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
 .env
 .app.json
 *.log

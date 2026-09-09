@@ -1,6 +1,6 @@
 {
   "name": "codexpro-bridge",
-  "version": "2.1.1",
+  "version": "3.1.2",
   "description": "Route non-trivial work through shared Skills, MCP tools, direct shared memory, and lightweight durable work state.",
   "author": {
     "name": "CodexPro Bridge"

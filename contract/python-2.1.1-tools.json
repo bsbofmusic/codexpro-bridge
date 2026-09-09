@@ -1,0 +1,567 @@
+[
+  {
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": true
+    },
+    "description": "Check the Bridge, shared Skill library, AgentGateway, Obsidian, MemOS and Work Runtime connectivity without exposing secrets.",
+    "inputSchema": {
+      "properties": {
+        "deep": {
+          "default": false,
+          "title": "Deep",
+          "type": "boolean"
+        }
+      },
+      "title": "doctorArguments",
+      "type": "object"
+    },
+    "name": "codexpro_bridge_doctor",
+    "outputSchema": {
+      "additionalProperties": true,
+      "title": "doctorDictOutput",
+      "type": "object"
+    }
+  },
+  {
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": true
+    },
+    "description": "Load the canonical SKILL.md for one enabled Skills Manager Skill.",
+    "inputSchema": {
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "load_skillArguments",
+      "type": "object"
+    },
+    "name": "codexpro_bridge_load_skill",
+    "outputSchema": {
+      "additionalProperties": true,
+      "title": "load_skillDictOutput",
+      "type": "object"
+    }
+  },
+  {
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": true
+    },
+    "description": "Load an allowed reference, template, script, asset, agent, prompt, or eval file from one managed Skill.",
+    "inputSchema": {
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "resource_path": {
+          "title": "Resource Path",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "resource_path"
+      ],
+      "title": "load_skill_resourceArguments",
+      "type": "object"
+    },
+    "name": "codexpro_bridge_load_skill_resource",
+    "outputSchema": {
+      "additionalProperties": true,
+      "title": "load_skill_resourceDictOutput",
+      "type": "object"
+    }
+  },
+  {
+    "annotations": {
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": true,
+      "readOnlyHint": false
+    },
+    "description": "Invoke exactly one namespaced tool exposed by AgentGateway. Calls are never replayed after uncertain delivery.",
+    "inputSchema": {
+      "properties": {
+        "arguments": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Arguments"
+        },
+        "tool": {
+          "title": "Tool",
+          "type": "string"
+        }
+      },
+      "required": [
+        "tool"
+      ],
+      "title": "mcp_callArguments",
+      "type": "object"
+    },
+    "name": "codexpro_bridge_mcp_call",
+    "outputSchema": {
+      "additionalProperties": true,
+      "title": "mcp_callDictOutput",
+      "type": "object"
+    }
+  },
+  {
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": true
+    },
+    "description": "List canonical MCP tools exposed by the local AgentGateway. Tool names are already namespaced by the gateway.",
+    "inputSchema": {
+      "properties": {
+        "include_schema": {
+          "default": false,
+          "title": "Include Schema",
+          "type": "boolean"
+        },
+        "limit": {
+          "default": 100,
+          "title": "Limit",
+          "type": "integer"
+        },
+        "offset": {
+          "default": 0,
+          "title": "Offset",
+          "type": "integer"
+        },
+        "query": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Query"
+        }
+      },
+      "title": "mcp_listArguments",
+      "type": "object"
+    },
+    "name": "codexpro_bridge_mcp_list",
+    "outputSchema": {
+      "additionalProperties": true,
+      "title": "mcp_listDictOutput",
+      "type": "object"
+    }
+  },
+  {
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": true
+    },
+    "description": "Return sanitized health for the shared local AgentGateway MCP endpoint.",
+    "inputSchema": {
+      "properties": {},
+      "title": "mcp_statusArguments",
+      "type": "object"
+    },
+    "name": "codexpro_bridge_mcp_status",
+    "outputSchema": {
+      "additionalProperties": true,
+      "title": "mcp_statusDictOutput",
+      "type": "object"
+    }
+  },
+  {
+    "annotations": {
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": true,
+      "readOnlyHint": false
+    },
+    "description": "Invoke any tool currently exposed by the selected Obsidian or MemOS MCP source with its original arguments. Calls are never replayed after uncertain delivery.",
+    "inputSchema": {
+      "properties": {
+        "arguments": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Arguments"
+        },
+        "source": {
+          "title": "Source",
+          "type": "string"
+        },
+        "tool": {
+          "title": "Tool",
+          "type": "string"
+        }
+      },
+      "required": [
+        "source",
+        "tool"
+      ],
+      "title": "memory_callArguments",
+      "type": "object"
+    },
+    "name": "codexpro_bridge_memory_call",
+    "outputSchema": {
+      "additionalProperties": true,
+      "title": "memory_callDictOutput",
+      "type": "object"
+    }
+  },
+  {
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": true
+    },
+    "description": "List the complete upstream Obsidian/MemOS MCP tool surfaces. No Bridge-side permission filtering is applied.",
+    "inputSchema": {
+      "properties": {
+        "include_schema": {
+          "default": false,
+          "title": "Include Schema",
+          "type": "boolean"
+        },
+        "limit": {
+          "default": 100,
+          "title": "Limit",
+          "type": "integer"
+        },
+        "offset": {
+          "default": 0,
+          "title": "Offset",
+          "type": "integer"
+        },
+        "query": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Query"
+        },
+        "source": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source"
+        }
+      },
+      "title": "memory_listArguments",
+      "type": "object"
+    },
+    "name": "codexpro_bridge_memory_list",
+    "outputSchema": {
+      "additionalProperties": true,
+      "title": "memory_listDictOutput",
+      "type": "object"
+    }
+  },
+  {
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": true
+    },
+    "description": "Search shared memory directly through Obsidian and/or MemOS without going through the Skill or AgentGateway layers.",
+    "inputSchema": {
+      "properties": {
+        "conversation_first_message": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Conversation First Message"
+        },
+        "limit": {
+          "default": 6,
+          "title": "Limit",
+          "type": "integer"
+        },
+        "query": {
+          "title": "Query",
+          "type": "string"
+        },
+        "source": {
+          "default": "auto",
+          "title": "Source",
+          "type": "string"
+        }
+      },
+      "required": [
+        "query"
+      ],
+      "title": "memory_searchArguments",
+      "type": "object"
+    },
+    "name": "codexpro_bridge_memory_search",
+    "outputSchema": {
+      "additionalProperties": true,
+      "title": "memory_searchDictOutput",
+      "type": "object"
+    }
+  },
+  {
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": true
+    },
+    "description": "Route a non-trivial task to the most relevant managed Skills. Load the selected SKILL.md before acting.",
+    "inputSchema": {
+      "properties": {
+        "limit": {
+          "default": 8,
+          "title": "Limit",
+          "type": "integer"
+        },
+        "task": {
+          "title": "Task",
+          "type": "string"
+        }
+      },
+      "required": [
+        "task"
+      ],
+      "title": "routeArguments",
+      "type": "object"
+    },
+    "name": "codexpro_bridge_route",
+    "outputSchema": {
+      "additionalProperties": true,
+      "title": "routeDictOutput",
+      "type": "object"
+    }
+  },
+  {
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": true
+    },
+    "description": "Canonical first tool for non-trivial work: route to shared Skills and independently recall Obsidian/MemOS when prior context is requested.",
+    "inputSchema": {
+      "properties": {
+        "conversation_first_message": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Conversation First Message"
+        },
+        "include_memory": {
+          "default": true,
+          "title": "Include Memory",
+          "type": "boolean"
+        },
+        "memory_limit": {
+          "default": 6,
+          "title": "Memory Limit",
+          "type": "integer"
+        },
+        "skill_limit": {
+          "default": 8,
+          "title": "Skill Limit",
+          "type": "integer"
+        },
+        "task": {
+          "title": "Task",
+          "type": "string"
+        }
+      },
+      "required": [
+        "task"
+      ],
+      "title": "route_and_recallArguments",
+      "type": "object"
+    },
+    "name": "codexpro_bridge_route_and_recall",
+    "outputSchema": {
+      "additionalProperties": true,
+      "title": "route_and_recallDictOutput",
+      "type": "object"
+    }
+  },
+  {
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": true
+    },
+    "description": "List enabled Skills from the Skills Manager central library.",
+    "inputSchema": {
+      "properties": {
+        "category": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Category"
+        },
+        "limit": {
+          "default": 50,
+          "title": "Limit",
+          "type": "integer"
+        },
+        "offset": {
+          "default": 0,
+          "title": "Offset",
+          "type": "integer"
+        },
+        "query": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Query"
+        }
+      },
+      "title": "skills_listArguments",
+      "type": "object"
+    },
+    "name": "codexpro_bridge_skills_list",
+    "outputSchema": {
+      "additionalProperties": true,
+      "title": "skills_listDictOutput",
+      "type": "object"
+    }
+  },
+  {
+    "annotations": {
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false,
+      "readOnlyHint": false
+    },
+    "description": "Bridge 2.1 durable work-state dispatcher for tasks, checkpoints, project context, mechanical audits, and artifact references. It records state only and never replays external mutations.",
+    "inputSchema": {
+      "properties": {
+        "arguments": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Arguments"
+        },
+        "operation": {
+          "enum": [
+            "task.create",
+            "task.get",
+            "task.list",
+            "task.update",
+            "task.transition",
+            "task.step_add",
+            "task.step_update",
+            "task.summary",
+            "task.resume",
+            "checkpoint.create",
+            "checkpoint.get",
+            "checkpoint.list",
+            "project.create",
+            "project.get",
+            "project.list",
+            "project.context",
+            "project.refresh",
+            "audit.create",
+            "audit.record",
+            "audit.evaluate",
+            "audit.get",
+            "audit.list",
+            "artifact.register",
+            "artifact.get",
+            "artifact.list",
+            "artifact.finalize",
+            "artifact.archive"
+          ],
+          "title": "Operation",
+          "type": "string"
+        }
+      },
+      "required": [
+        "operation"
+      ],
+      "title": "workArguments",
+      "type": "object"
+    },
+    "name": "codexpro_bridge_work",
+    "outputSchema": {
+      "additionalProperties": true,
+      "title": "workDictOutput",
+      "type": "object"
+    }
+  }
+]

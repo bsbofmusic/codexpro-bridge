@@ -129,7 +129,7 @@ Historical documentation may name retired tools for diagnosis, but executable cu
 
 A module/surface release passes only when:
 
-- full pytest and compile audit pass
+- full Go format/test/vet/static-build audit pass
 - registry collision tests pass
 - module enable/disable hot-plug tests pass
 - unknown module selection fails closed
