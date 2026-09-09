@@ -1,6 +1,6 @@
 # Deployment and Rollback
 
-CodexPro Bridge 3.1.2 is a Go single-binary service. Deployment is Bridge-only: shared Skills, AgentGateway, Memory providers, official CodexPro, Pi, Paseo and ToolHive are not restarted or migrated merely because Bridge changes.
+CodexPro Bridge 3.1.3 is a Go single-binary service. Deployment is Bridge-only: shared Skills, AgentGateway, Memory providers, official CodexPro, Pi, Paseo and ToolHive are not restarted or migrated merely because Bridge changes.
 
 ## Production deployment
 
@@ -39,6 +39,12 @@ Do not encode concrete Skills/MCP/Memory provider paths or optional AgentGateway
 Prefer adding MCP-speaking new capabilities such as Vision/Search to AgentGateway so Bridge discovers them with zero code changes. A special non-MCP protocol may use a thin Generic Adapter.
 
 ## 3.1.x rollback
+
+For the 3.1.3 trigger-routing patch, the immediate bounded rollback binary is:
+
+`/home/agent/.local/share/codexpro-bridge/rollback-3.1.3-trigger-routing-20260909T145000Z/codexpro-bridge-3.1.2`
+
+This patch does not change Work schema, provider configuration, public MCP tools, URL, or token. A 3.1.3 → 3.1.2 rollback therefore restores only the binary and restarts Bridge, then re-verifies surface fingerprint, health, and Skill routing.
 
 Preferred rollback package for the 3.1 cutover:
 

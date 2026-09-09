@@ -1,4 +1,4 @@
-# CodexPro Bridge 3.1.2
+# CodexPro Bridge 3.1.3
 
 ## Goal
 
@@ -59,4 +59,4 @@ Work Runtime stores deterministic lifecycle state only. Web Accelerator provides
 
 ## Release line
 
-Runtime 3.1.2 is the current Go small-cannon line: single stripped binary, Work schema 2, Generic Adapter architecture, dynamic provider/source discovery, deterministic Web Accelerator, graceful degradation, and anti-crash/anti-OOM containment. See `README.md`, `CHANGELOG.md`, and `docs/bridge-v3.1-go-release-receipt.md` for maintained evidence.
+Runtime 3.1.3 is the current Go small-cannon line: single stripped binary, Work schema 2, Generic Adapter architecture, dynamic provider/source discovery, deterministic Web Accelerator, trigger-aware managed Skill routing, graceful degradation, and anti-crash/anti-OOM containment. See `README.md`, `CHANGELOG.md`, `docs/bridge-v3.1-go-release-receipt.md`, and `docs/bridge-v3.1.3-trigger-routing-release-receipt.md` for maintained evidence.

@@ -64,3 +64,40 @@ func TestRecordsRejectManagedPathOutsideSharedRoot(t *testing.T) {
 		t.Fatal("expected out-of-root managed path to fail closed")
 	}
 }
+
+func TestRouteHonorsFrontmatterTriggersInsideNaturalChineseText(t *testing.T) {
+	managerRoot := t.TempDir()
+	root := filepath.Join(managerRoot, "skills")
+	lifeDir := filepath.Join(root, "life-experience")
+	otherDir := filepath.Join(root, "last30days")
+	for _, dir := range []string{lifeDir, otherDir} {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	lifeSkill := "---\nname: life-experience\ndescription: Retrieve lived-experience cases.\ntriggers:\n  - 人生经验\n  - 人生导师\nversion: 1.0.0\n---\n\n# Life Experience\n"
+	otherSkill := "---\nname: last30days\ndescription: Research recent community discussion and what people say.\nversion: 1.0.0\n---\n\n# Last 30 Days\n"
+	if err := os.WriteFile(filepath.Join(lifeDir, "SKILL.md"), []byte(lifeSkill), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(otherDir, "SKILL.md"), []byte(otherSkill), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	cli := writeFakeSkillsManagerCLI(t, []map[string]any{
+		{"id": "skill-life", "name": "life-experience", "path": lifeDir, "enabled": true},
+		{"id": "skill-other", "name": "last30days", "path": otherDir, "enabled": true},
+	})
+	r := &Runtime{Root: root, CLI: cli}
+
+	got, err := r.Route("帮我找一些30多岁转行的人生经验，尤其是后来后悔没后悔、几年后过得怎么样", 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	skills := got["skills"].([]map[string]any)
+	if len(skills) == 0 || skills[0]["name"] != "life-experience" {
+		t.Fatalf("first routed skill=%v want life-experience", skills)
+	}
+	if _, exposed := skills[0]["_triggers"]; exposed {
+		t.Fatal("private trigger metadata must not be exposed in public route output")
+	}
+}

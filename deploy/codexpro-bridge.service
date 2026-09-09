@@ -1,5 +1,5 @@
 [Unit]
-Description=CodexPro Bridge MCP (Go 3.1.2)
+Description=CodexPro Bridge MCP (Go 3.1.3)
 After=network-online.target
 Wants=network-online.target
 StartLimitIntervalSec=60

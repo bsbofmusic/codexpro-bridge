@@ -1,6 +1,6 @@
 # CodexPro Bridge
 
-CodexPro Bridge is the thin ChatGPT-facing command bus for the VPS shared agent stack. The active 3.1.2 runtime is Go and deploys as one stripped binary; shared data and execution remain owned by their existing systems.
+CodexPro Bridge is the thin ChatGPT-facing command bus for the VPS shared agent stack. The active 3.1.3 runtime is Go and deploys as one stripped binary; shared data and execution remain owned by their existing systems.
 
 ## Runtime
 
@@ -20,7 +20,7 @@ The Go 3.0 migration preserved the Python 2.1.1 public MCP contract. Bridge 3.1 
 - Read enabled Skills live from Skills Manager at `/home/agent/.skills-manager/skills`.
 - Dynamically list and call shared MCP tools through AgentGateway Core and optional isolated AgentGateway endpoints.
 - Expose direct shared memory through full-permission Obsidian and MemOS MCP dispatchers without creating another memory store.
-- Keep ChatGPT-facing routing lightweight: `route_and_recall` first for non-trivial work, then load only the selected Skill/tool schema/context on demand.
+- Keep ChatGPT-facing routing lightweight: `route_and_recall` first for non-trivial work, honor managed Skill `triggers:` as private routing metadata, then load only the selected Skill/tool schema/context on demand.
 - Maintain lightweight durable Work state for tasks, checkpoints, project context references, mechanical audits, operation receipts, result references, and Resume Capsules without becoming an execution plane.
 - Provide bounded deterministic Web acceleration: conversation/task affinity, no-replay receipts, result shaping and limited read-only parallel MCP fan-out.
 - Mount built-in and future capability systems through a provider-neutral thin Adapter contract instead of adding system-specific server switches. Adapters may map protocols, normalize results, expose health, and manage lifecycle; they do not own planning, scheduling, AI reasoning, workflow state, or a second data plane.
@@ -53,11 +53,12 @@ Bridge→AgentGateway uses short-lived request/response MCP sessions. The Go cli
 
 The public Bridge server is stateless. It binds loopback only and sits behind the authenticated Cloudflare Tunnel. Because the tunnel connects from loopback while preserving the public Host header, Go SDK localhost Host-header protection is explicitly disabled; Bridge's own `/mcp` token authentication remains mandatory.
 
-Bridge 3.1.2 also treats process survival as a fault-domain contract: authenticated MCP request bodies are bounded (4 MiB default), HTTP header/idle time is bounded, the Go runtime has a soft 128 MiB memory budget, and the systemd cgroup has separate memory/swap/task/file-descriptor ceilings well above measured production pressure peaks. `cmd/bridge-stress` provides a read-only authenticated MCP pressure probe; shared-MCP failures may degrade requests but must not restart Bridge or leave persistent AgentGateway child-process growth.
+Bridge 3.1.3 preserves the 3.1.2 process-survival contract: authenticated MCP request bodies are bounded (4 MiB default), HTTP header/idle time is bounded, the Go runtime has a soft 128 MiB memory budget, and the systemd cgroup has separate memory/swap/task/file-descriptor ceilings well above measured production pressure peaks. `cmd/bridge-stress` provides a read-only authenticated MCP pressure probe; shared-MCP failures may degrade requests but must not restart Bridge or leave persistent AgentGateway child-process growth.
 
 ## Documentation
 
 - [Go 3.1 release receipt](docs/bridge-v3.1-go-release-receipt.md)
+- [Go 3.1.3 trigger-routing patch receipt](docs/bridge-v3.1.3-trigger-routing-release-receipt.md)
 - [Go 3.0 migration plan](docs/bridge-v3-go-migration-plan.md)
 - [Go 3.0.1 release receipt](docs/bridge-v3.0.1-go-release-receipt.md)
 - [Architecture](docs/architecture.md)

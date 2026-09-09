@@ -1,3 +1,3 @@
 package core
 
-const RuntimeVersion = "3.1.2"
+const RuntimeVersion = "3.1.3"

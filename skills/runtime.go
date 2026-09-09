@@ -193,7 +193,7 @@ func (r *Runtime) records() ([]map[string]any, error) {
 		item := map[string]any{
 			"id": raw.SkillID, "name": name, "description": toString(meta["description"]),
 			"tags": stringList(meta["tags"]), "path": filepath.ToSlash(rel), "sha256": hash,
-			"_file": skillFile, "_dir": dir,
+			"_file": skillFile, "_dir": dir, "_triggers": stringList(meta["triggers"]),
 		}
 		if item["id"] == "" {
 			item["id"] = name
@@ -374,11 +374,10 @@ func (r *Runtime) Route(task string, limit int) (map[string]any, error) {
 	if limit < 1 || limit > 20 {
 		return nil, core.Err("invalid_limit", "route limit must be between 1 and 20")
 	}
-	catalog, err := r.List("")
+	skills, err := r.records()
 	if err != nil {
 		return nil, err
 	}
-	skills := catalog["skills"].([]map[string]any)
 	terms := map[string]bool{}
 	for _, token := range tokenRE.FindAllString(task, -1) {
 		t := strings.ToLower(token)
@@ -403,6 +402,13 @@ func (r *Runtime) Route(task string, limit int) (map[string]any, error) {
 		if name != "" && strings.Contains(taskFolded, nameFolded) {
 			score += 100
 		}
+		for _, trigger := range stringList(item["_triggers"]) {
+			triggerFolded := strings.ToLower(strings.TrimSpace(trigger))
+			if len([]rune(triggerFolded)) >= 2 && strings.Contains(taskFolded, triggerFolded) {
+				score += 80
+				break
+			}
+		}
 		for term := range terms {
 			if strings.Contains(nameFolded, term) {
 				score += 12
@@ -425,7 +431,7 @@ func (r *Runtime) Route(task string, limit int) (map[string]any, error) {
 	}
 	matches := make([]map[string]any, 0, len(rows))
 	for _, row := range rows {
-		matches = append(matches, row.item)
+		matches = append(matches, publicRecord(row.item))
 	}
-	return map[string]any{"ok": true, "task": task, "routing": "Choose a matching managed Skill, then load its SKILL.md before acting.", "skills": matches, "match_count": len(matches), "catalog_count": catalog["count"], "source": catalog["source"]}, nil
+	return map[string]any{"ok": true, "task": task, "routing": "Choose a matching managed Skill, then load its SKILL.md before acting.", "skills": matches, "match_count": len(matches), "catalog_count": len(skills), "source": "skills-manager"}, nil
 }

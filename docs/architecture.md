@@ -1,6 +1,6 @@
 # Architecture
 
-CodexPro Bridge is a thin ChatGPT-facing shared-capability adapter. The active 3.1.2 runtime is a statically linked Go binary. ChatGPT Web remains the only reasoning/planning brain; Bridge is deterministic mechanical infrastructure.
+CodexPro Bridge is a thin ChatGPT-facing shared-capability adapter. The active 3.1.3 runtime is a statically linked Go binary. ChatGPT Web remains the only reasoning/planning brain; Bridge is deterministic mechanical infrastructure.
 
 ```text
 ChatGPT Web

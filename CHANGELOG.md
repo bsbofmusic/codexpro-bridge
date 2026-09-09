@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.1.3
+
+- Fixed `shared_skills` routing to honor managed Skill frontmatter `triggers:` as private routing metadata. This lets exact trigger phrases match inside natural Chinese text without changing the public Skill record or MCP tool schema.
+- Route scoring now reads internal canonical Skill records, applies one bounded trigger-match bonus, and strips private trigger metadata before returning results. No second router, copied index, provider binding, or tool-count contract was added.
+- Added a regression test for a natural Chinese request containing `人生经验`, proving `life-experience` outranks an unrelated community-research candidate while `_triggers` remains private.
+
 ## 3.1.2
 
 - Added a reusable read-only `bridge-stress` probe for authenticated MCP surface/tool pressure tests without printing credentials or adding a second runtime.
