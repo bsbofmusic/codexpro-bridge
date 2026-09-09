@@ -2,7 +2,7 @@
 
 CodexPro Bridge is a thin ChatGPT-facing MCP adapter for a shared agent stack. It gives ChatGPT a small, stable public surface while lazily reaching the live Skills Manager library, AgentGateway MCP tools, Obsidian/MemOS memory, and a lightweight Work Runtime only when a task needs them.
 
-Current runtime release: **2.1.0**.
+Current runtime release: **2.1.1**.
 
 ## Design goal
 

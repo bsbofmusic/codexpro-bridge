@@ -14,7 +14,7 @@ from mcp.client.streamable_http import streamable_http_client
 async def run(url: str, token: str | None = None, *, memory_semantics: bool = False) -> dict[str, object]:
     headers = {"Authorization": f"Bearer {token}"} if token else None
     client = httpx2.AsyncClient(headers=headers, timeout=60.0) if headers else None
-    async with streamable_http_client(url, http_client=client, terminate_on_close=False) as (read_stream, write_stream):
+    async with streamable_http_client(url, http_client=client, terminate_on_close=True) as (read_stream, write_stream):
         async with ClientSession(read_stream, write_stream, read_timeout_seconds=60) as session:
             await session.initialize()
             listed = await session.list_tools()

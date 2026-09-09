@@ -52,7 +52,7 @@ async def run(url: str, token: str) -> dict[str, object]:
     note_path = Path("/home/agent/obsidian-vault") / note
     kb_removed = False
     try:
-        async with streamable_http_client(url, http_client=client, terminate_on_close=False) as (read_stream, write_stream):
+        async with streamable_http_client(url, http_client=client, terminate_on_close=True) as (read_stream, write_stream):
             async with ClientSession(read_stream, write_stream, read_timeout_seconds=120) as session:
                 await session.initialize()
 

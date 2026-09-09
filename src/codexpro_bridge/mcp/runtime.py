@@ -60,7 +60,7 @@ class AgentGatewayTransport:
 
     async def list_tools(self) -> list[Any]:
         try:
-            async with streamable_http_client(self.url, terminate_on_close=False) as (read_stream, write_stream):
+            async with streamable_http_client(self.url, terminate_on_close=True) as (read_stream, write_stream):
                 async with ClientSession(
                     read_stream,
                     write_stream,
@@ -77,7 +77,7 @@ class AgentGatewayTransport:
     async def call_tool(self, name: str, arguments: dict[str, Any]) -> Any:
         sent = False
         try:
-            async with streamable_http_client(self.url, terminate_on_close=False) as (read_stream, write_stream):
+            async with streamable_http_client(self.url, terminate_on_close=True) as (read_stream, write_stream):
                 async with ClientSession(
                     read_stream,
                     write_stream,

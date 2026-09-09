@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from dataclasses import dataclass
 from types import SimpleNamespace
 from typing import Any
@@ -8,7 +9,7 @@ import pytest
 
 from codexpro_bridge.core.config import BridgeConfig
 from codexpro_bridge.core.errors import BridgeError
-from codexpro_bridge.mcp.runtime import SharedMcpRuntime
+from codexpro_bridge.mcp.runtime import AgentGatewayTransport, SharedMcpRuntime
 
 
 @dataclass
@@ -148,3 +149,54 @@ def test_optional_gateway_tool_dispatches_to_its_own_transport() -> None:
     assert result["ok"] is True
     assert primary.calls == 0
     assert optional.calls == 1
+
+
+def test_agentgateway_transport_terminates_short_lived_sessions(monkeypatch: pytest.MonkeyPatch) -> None:
+    observed: list[bool | None] = []
+
+    class FakeHttpTransport:
+        async def __aenter__(self):
+            return object(), object()
+
+        async def __aexit__(self, exc_type, exc, tb):
+            return False
+
+    class FakeSession:
+        def __init__(self, *args: Any, **kwargs: Any):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc, tb):
+            return False
+
+        async def initialize(self) -> None:
+            return None
+
+        async def list_tools(self) -> Any:
+            return SimpleNamespace(tools=[])
+
+        async def call_tool(self, name: str, *, arguments: dict[str, Any], read_timeout_seconds: float) -> Any:
+            return SimpleNamespace(isError=False, content=[], structuredContent={"name": name})
+
+    def fake_streamable_http_client(
+        url: str,
+        *,
+        terminate_on_close: bool | None = None,
+        **kwargs: Any,
+    ) -> FakeHttpTransport:
+        observed.append(terminate_on_close)
+        return FakeHttpTransport()
+
+    monkeypatch.setattr("codexpro_bridge.mcp.runtime.streamable_http_client", fake_streamable_http_client)
+    monkeypatch.setattr("codexpro_bridge.mcp.runtime.ClientSession", FakeSession)
+
+    transport = AgentGatewayTransport("http://127.0.0.1:19090/mcp", 30)
+
+    async def exercise() -> None:
+        assert await transport.list_tools() == []
+        await transport.call_tool("example", {})
+
+    asyncio.run(exercise())
+    assert observed == [True, True]

@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.1.1
+
+- Fixed a P0 Streamable HTTP session-lifecycle leak: short-lived Bridge→AgentGateway sessions now terminate on context exit instead of leaving AgentGateway stdio target subprocess groups alive.
+- Updated live/surface/full-permission smoke clients to terminate their sessions as well, so verification itself cannot accumulate target processes.
+- Added regression coverage requiring both MCP list and call transports to request session termination.
+- Preserved the existing modular public tool surface and Work Runtime contract; this is a lifecycle/reliability bugfix, not a schema change.
+
 ## 2.1.0
 
 - Restored the public GitHub repository as the maintained versioned source/documentation/release mirror for the current 2.1 runtime while keeping the live MCP endpoint authoritative for client schema.

@@ -16,7 +16,7 @@ def test_plugin_manifest_declares_one_skill_and_two_pre_registered_apps() -> Non
     manifest = json.loads((PLUGIN / ".codex-plugin" / "plugin.json").read_text())
 
     assert manifest["name"] == PLUGIN.name
-    assert manifest["version"] == "2.1.0"
+    assert manifest["version"] == "2.1.1"
     assert manifest["skills"] == "./skills/"
     assert manifest["apps"] == "./.app.json"
     assert "mcpServers" not in manifest
