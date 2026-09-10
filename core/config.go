@@ -16,11 +16,8 @@ type Config struct {
 	AllowAnonymous       bool
 	MaxRequestBytes      int
 	SkillsRoot           string
-	MCPURL               string
-	OptionalURLs         []string
+	MCPDiscoveryURL      string
 	MCPTimeoutSeconds    int
-	ObsidianMCPCommand   string
-	MemosMCPCommand      string
 	MemoryTimeoutSeconds int
 	WorkDBPath           string
 	MaxOutputChars       int
@@ -75,16 +72,6 @@ func envModules() []string {
 	return out
 }
 
-func envList(key string) []string {
-	out := []string{}
-	for _, item := range strings.Split(os.Getenv(key), ",") {
-		if item = strings.TrimSpace(item); item != "" {
-			out = append(out, item)
-		}
-	}
-	return out
-}
-
 func FromEnv() (Config, error) {
 	port, err := envInt("CODEXPRO_BRIDGE_PORT", 18787, 1024, 65535)
 	if err != nil {
@@ -117,11 +104,8 @@ func FromEnv() (Config, error) {
 		AllowAnonymous:       envBool("CODEXPRO_BRIDGE_ALLOW_ANONYMOUS", false),
 		MaxRequestBytes:      maxRequestBytes,
 		SkillsRoot:           envDefault("CODEXPRO_BRIDGE_SKILLS_ROOT", "/home/agent/.skills-manager/skills"),
-		MCPURL:               envDefault("CODEXPRO_BRIDGE_MCP_URL", "http://127.0.0.1:19090/mcp"),
-		OptionalURLs:         envList("CODEXPRO_BRIDGE_MCP_OPTIONAL_URLS"),
+		MCPDiscoveryURL:      envDefault("CODEXPRO_BRIDGE_MCP_DISCOVERY_URL", "http://127.0.0.1:19091/config_dump"),
 		MCPTimeoutSeconds:    mcpTimeout,
-		ObsidianMCPCommand:   envDefault("CODEXPRO_BRIDGE_OBSIDIAN_MCP_COMMAND", "/home/agent/.local/share/agent-stack/memory/obsidian-mcp.sh"),
-		MemosMCPCommand:      envDefault("CODEXPRO_BRIDGE_MEMOS_MCP_COMMAND", "/home/agent/.local/share/agent-stack/memory/memos-api-mcp.sh"),
 		MemoryTimeoutSeconds: memoryTimeout,
 		WorkDBPath:           envDefault("CODEXPRO_BRIDGE_WORK_DB_PATH", "/home/agent/.local/share/codexpro-bridge/work-runtime.sqlite3"),
 		MaxOutputChars:       maxOutput,
@@ -150,16 +134,9 @@ func (c Config) Validate() error {
 	if !filepath.IsAbs(c.SkillsRoot) {
 		return fmt.Errorf("invalid_config: Shared Skill root must be an absolute path")
 	}
-	for _, endpoint := range append([]string{c.MCPURL}, c.OptionalURLs...) {
-		u, err := url.Parse(endpoint)
-		if err != nil || (u.Scheme != "http" && u.Scheme != "https") || !isLoopbackHost(u.Hostname()) {
-			return fmt.Errorf("invalid_config: Shared MCP endpoints must be loopback HTTP(S) URLs")
-		}
-	}
-	for _, command := range []string{c.ObsidianMCPCommand, c.MemosMCPCommand} {
-		if !filepath.IsAbs(command) {
-			return fmt.Errorf("invalid_config: Shared memory MCP commands must be absolute paths")
-		}
+	u, err := url.Parse(c.MCPDiscoveryURL)
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || !isLoopbackHost(u.Hostname()) {
+		return fmt.Errorf("invalid_config: Shared MCP discovery endpoint must be a loopback HTTP(S) URL")
 	}
 	if !filepath.IsAbs(c.WorkDBPath) {
 		return fmt.Errorf("invalid_config: Work Runtime database path must be absolute")
@@ -179,9 +156,8 @@ func (c Config) Public() map[string]any {
 	return map[string]any{
 		"host": c.Host, "port": c.Port, "auth_required": !c.AllowAnonymous,
 		"max_request_bytes": c.MaxRequestBytes,
-		"skills_root":       c.SkillsRoot, "mcp_url": c.MCPURL, "mcp_optional_urls": append([]string(nil), c.OptionalURLs...),
-		"mcp_timeout_seconds": c.MCPTimeoutSeconds, "obsidian_mcp_command": c.ObsidianMCPCommand,
-		"memos_mcp_command": c.MemosMCPCommand, "memory_timeout_seconds": c.MemoryTimeoutSeconds,
+		"skills_root":       c.SkillsRoot, "mcp_discovery_url": c.MCPDiscoveryURL,
+		"mcp_timeout_seconds": c.MCPTimeoutSeconds, "memory_timeout_seconds": c.MemoryTimeoutSeconds,
 		"work_db_path": c.WorkDBPath, "enabled_modules": modules, "max_output_chars": c.MaxOutputChars,
 	}
 }

@@ -44,7 +44,7 @@ func BuildWithAdapters(config core.Config, extras ...capabilities.Adapter) (*mcp
 		Registry:    capabilities.New(config.Modules),
 		Skills:      skills.New(config.SkillsRoot),
 		MCP:         mcpRuntime,
-		Memory:      shared_memory.New(config),
+		Memory:      shared_memory.New(config, mcpRuntime),
 		Work:        workRuntime,
 		Accelerator: accelerator.New(mcpRuntime, workRuntime),
 	}

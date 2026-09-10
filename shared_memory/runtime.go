@@ -3,7 +3,6 @@ package shared_memory
 import (
 	"context"
 	"encoding/json"
-	"os/exec"
 	"regexp"
 	"sort"
 	"strings"
@@ -14,47 +13,40 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-const Version = "1.1.0"
+const Version = "1.2.0"
 
 var memorySignal = regexp.MustCompile(`(?i)(\bremember\b|\bmemory\b|\brecall\b|\bprevious(?:ly)?\b|\bprior\b|\bhistory\b|\bknowledge\s*base\b|\bsecond\s*brain\b|\bpreferences?\b|记忆|回忆|之前|以前|过去|历史|第二大脑|知识库|偏好|上次|此前|先前|说过|聊过)`)
 
-type commandTransport struct {
-	command string
+type routeTransport struct {
+	shared *shared_mcp.Runtime
+	route  string
 }
 
-func (t *commandTransport) connect(ctx context.Context) (*mcp.ClientSession, error) {
-	client := mcp.NewClient(&mcp.Implementation{Name: "codexpro-bridge", Version: core.RuntimeVersion}, nil)
-	transport := &mcp.CommandTransport{Command: exec.Command(t.command), TerminateDuration: 2 * time.Second}
-	return client.Connect(ctx, transport, nil)
-}
-
-func (t *commandTransport) ListTools(ctx context.Context) ([]*mcp.Tool, error) {
-	session, err := t.connect(ctx)
+func (t *routeTransport) transport(ctx context.Context) (shared_mcp.Transport, error) {
+	if t == nil || t.shared == nil {
+		return nil, core.Err("memory_unavailable", "Shared memory MCP source is unavailable")
+	}
+	transport, err := t.shared.TransportForRoute(ctx, t.route)
 	if err != nil {
 		return nil, core.Err("memory_unavailable", "Shared memory MCP source is unavailable")
 	}
-	defer session.Close()
-	result, err := session.ListTools(ctx, nil)
-	if err != nil {
-		return nil, core.Err("memory_unavailable", "Shared memory MCP source is unavailable")
-	}
-	if result == nil {
-		return []*mcp.Tool{}, nil
-	}
-	return result.Tools, nil
+	return transport, nil
 }
 
-func (t *commandTransport) CallTool(ctx context.Context, name string, arguments map[string]any) (*mcp.CallToolResult, error) {
-	session, err := t.connect(ctx)
+func (t *routeTransport) ListTools(ctx context.Context) ([]*mcp.Tool, error) {
+	transport, err := t.transport(ctx)
 	if err != nil {
-		return nil, core.Err("memory_unavailable", "Shared memory MCP call could not be delivered")
+		return nil, err
 	}
-	defer session.Close()
-	result, err := session.CallTool(ctx, &mcp.CallToolParams{Name: name, Arguments: arguments})
+	return transport.ListTools(ctx)
+}
+
+func (t *routeTransport) CallTool(ctx context.Context, name string, arguments map[string]any) (*mcp.CallToolResult, error) {
+	transport, err := t.transport(ctx)
 	if err != nil {
-		return nil, core.Err("delivery_unknown", "Memory MCP delivery status is unknown; the call was not replayed")
+		return nil, err
 	}
-	return result, nil
+	return transport.CallTool(ctx, name, arguments)
 }
 
 type Runtime struct {
@@ -69,11 +61,11 @@ type SearchBinding struct {
 	Arguments func(query, conversationFirstMessage string, limit int) map[string]any
 }
 
-func New(config core.Config) *Runtime {
+func New(config core.Config, mcpRuntime *shared_mcp.Runtime) *Runtime {
 	return &Runtime{
 		Transports: map[string]shared_mcp.Transport{
-			"obsidian": &commandTransport{command: config.ObsidianMCPCommand},
-			"memos":    &commandTransport{command: config.MemosMCPCommand},
+			"obsidian": &routeTransport{shared: mcpRuntime, route: "obsidian"},
+			"memos":    &routeTransport{shared: mcpRuntime, route: "memos"},
 		},
 		SearchBindings: map[string]SearchBinding{
 			"obsidian": {

@@ -22,12 +22,17 @@ var Operations = []string{
 	"result.read", "result.delete",
 }
 
+type MCPRuntime interface {
+	ResolveTools(context.Context, []string) (map[string]*shared_mcp.ResolvedTool, error)
+	CallResolved(context.Context, *shared_mcp.ResolvedTool, map[string]any) (map[string]any, error)
+}
+
 type Runtime struct {
-	MCP  *shared_mcp.Runtime
+	MCP  MCPRuntime
 	Work *work.Runtime
 }
 
-func New(mcpRuntime *shared_mcp.Runtime, workRuntime *work.Runtime) *Runtime {
+func New(mcpRuntime MCPRuntime, workRuntime *work.Runtime) *Runtime {
 	return &Runtime{MCP: mcpRuntime, Work: workRuntime}
 }
 

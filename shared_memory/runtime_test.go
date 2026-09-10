@@ -6,9 +6,18 @@ import (
 	"testing"
 	"time"
 
+	"github.com/codexpro/bridge/core"
 	"github.com/codexpro/bridge/shared_mcp"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
+
+type memoryDiscovery struct {
+	endpoints []string
+}
+
+func (d memoryDiscovery) Endpoints(context.Context) ([]string, error) {
+	return append([]string(nil), d.endpoints...), nil
+}
 
 type memoryFake struct {
 	tools      []*mcp.Tool
@@ -35,6 +44,27 @@ func (f *memoryFake) CallTool(_ context.Context, name string, args map[string]an
 		return &mcp.CallToolResult{Content: []mcp.Content{&mcp.TextContent{Text: "ok"}}}, nil
 	}
 	return f.callResult, nil
+}
+
+func TestNewUsesSharedMCPDynamicRoutesForMemorySources(t *testing.T) {
+	obsidian := &memoryFake{tools: []*mcp.Tool{{Name: "search_content"}}}
+	memos := &memoryFake{tools: []*mcp.Tool{{Name: "search_memory"}}}
+	endpoints := []string{"http://127.0.0.1:19090/mcp/memos", "http://127.0.0.1:19090/mcp/obsidian"}
+	shared := &shared_mcp.Runtime{
+		Discovery: memoryDiscovery{endpoints: endpoints},
+		NewTransport: func(endpoint string) shared_mcp.Transport {
+			if endpoint == endpoints[0] {
+				return memos
+			}
+			return obsidian
+		},
+		Timeout: time.Second,
+	}
+	r := New(core.Config{MemoryTimeoutSeconds: 1}, shared)
+	got, err := r.ListTools(context.Background(), "", "", false, 0, 100)
+	if err != nil || got["count"] != 2 {
+		t.Fatalf("shared MCP memory transport did not resolve dynamically: %#v err=%v", got, err)
+	}
 }
 
 func TestListToolsDegradesOneMemorySource(t *testing.T) {

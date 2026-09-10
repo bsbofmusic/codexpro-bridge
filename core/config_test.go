@@ -9,8 +9,8 @@ func TestConfigDefaultsAndValidation(t *testing.T) {
 	t.Setenv("CODEXPRO_BRIDGE_HTTP_TOKEN", strings.Repeat("x", 32))
 	for _, key := range []string{
 		"CODEXPRO_BRIDGE_HOST", "CODEXPRO_BRIDGE_PORT", "CODEXPRO_BRIDGE_ALLOW_ANONYMOUS",
-		"CODEXPRO_BRIDGE_SKILLS_ROOT", "CODEXPRO_BRIDGE_MCP_URL", "CODEXPRO_BRIDGE_MCP_OPTIONAL_URLS",
-		"CODEXPRO_BRIDGE_MCP_TIMEOUT", "CODEXPRO_BRIDGE_OBSIDIAN_MCP_COMMAND", "CODEXPRO_BRIDGE_MEMOS_MCP_COMMAND",
+		"CODEXPRO_BRIDGE_SKILLS_ROOT", "CODEXPRO_BRIDGE_MCP_DISCOVERY_URL",
+		"CODEXPRO_BRIDGE_MCP_TIMEOUT",
 		"CODEXPRO_BRIDGE_MEMORY_TIMEOUT", "CODEXPRO_BRIDGE_WORK_DB_PATH", "CODEXPRO_BRIDGE_MODULES",
 		"CODEXPRO_BRIDGE_MAX_OUTPUT_CHARS", "CODEXPRO_BRIDGE_MAX_REQUEST_BYTES", "CODEXPRO_HTTP_TOKEN",
 	} {
@@ -25,19 +25,31 @@ func TestConfigDefaultsAndValidation(t *testing.T) {
 	if c.Host != "127.0.0.1" || c.Port != 18787 || c.MCPTimeoutSeconds != 180 || c.MemoryTimeoutSeconds != 180 || c.MaxRequestBytes != 4*1024*1024 {
 		t.Fatalf("unexpected defaults: %+v", c)
 	}
-	if c.ObsidianMCPCommand == "" || c.MemosMCPCommand == "" || c.WorkDBPath == "" {
-		t.Fatal("memory/work paths must have defaults")
+	if c.MCPDiscoveryURL != "http://127.0.0.1:19091/config_dump" {
+		t.Fatalf("unexpected MCP discovery default: %s", c.MCPDiscoveryURL)
+	}
+	if c.WorkDBPath == "" {
+		t.Fatal("work path must have a default")
 	}
 }
 
 func TestConfigRejectsNonLoopback(t *testing.T) {
 	c := Config{
 		Host: "0.0.0.0", Port: 18787, Token: strings.Repeat("x", 24),
-		SkillsRoot: "/tmp", MCPURL: "http://127.0.0.1:19090/mcp",
-		ObsidianMCPCommand: "/bin/true", MemosMCPCommand: "/bin/true", WorkDBPath: "/tmp/work.db",
+		SkillsRoot: "/tmp", MCPDiscoveryURL: "http://127.0.0.1:19091/config_dump", WorkDBPath: "/tmp/work.db",
 	}
 	if err := c.Validate(); err == nil {
 		t.Fatal("expected non-loopback rejection")
+	}
+}
+
+func TestConfigRejectsNonLoopbackDiscovery(t *testing.T) {
+	c := Config{
+		Host: "127.0.0.1", Port: 18787, Token: strings.Repeat("x", 24),
+		SkillsRoot: "/tmp", MCPDiscoveryURL: "http://10.0.0.5:19091/config_dump", WorkDBPath: "/tmp/work.db",
+	}
+	if err := c.Validate(); err == nil {
+		t.Fatal("expected non-loopback discovery rejection")
 	}
 }
 

@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"sync"
 	"testing"
-	"time"
 
 	"github.com/codexpro/bridge/core"
 	"github.com/codexpro/bridge/shared_mcp"
@@ -41,11 +40,40 @@ func (f *fakeTransport) count(name string) int {
 	return f.calls[name]
 }
 
-func newRuntime(t *testing.T, transport shared_mcp.Transport) *Runtime {
+type fakeMCPRuntime struct {
+	transport *fakeTransport
+}
+
+func (f *fakeMCPRuntime) ResolveTools(_ context.Context, names []string) (map[string]*shared_mcp.ResolvedTool, error) {
+	resolved := make(map[string]*shared_mcp.ResolvedTool, len(names))
+	for _, name := range names {
+		for _, item := range f.transport.tools {
+			if item != nil && item.Name == name {
+				resolved[name] = &shared_mcp.ResolvedTool{Tool: item}
+				break
+			}
+		}
+	}
+	return resolved, nil
+}
+
+func (f *fakeMCPRuntime) CallResolved(ctx context.Context, selected *shared_mcp.ResolvedTool, args map[string]any) (map[string]any, error) {
+	if selected == nil || selected.Tool == nil {
+		return nil, core.Err("mcp_denied", "MCP tool is not exposed")
+	}
+	result, err := f.transport.CallTool(ctx, selected.Tool.Name, args)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{
+		"ok": true, "tool": selected.Tool.Name, "result": shared_mcp.NormalizeCallResult(result),
+	}, nil
+}
+
+func newRuntime(t *testing.T, transport *fakeTransport) *Runtime {
 	t.Helper()
-	mcpRuntime := &shared_mcp.Runtime{Primary: transport, Timeout: time.Second, MaxOutput: 120000}
 	workRuntime := work.New(filepath.Join(t.TempDir(), "work.sqlite3"))
-	return New(mcpRuntime, workRuntime)
+	return New(&fakeMCPRuntime{transport: transport}, workRuntime)
 }
 
 func tool(name string, readOnly bool) *mcp.Tool {

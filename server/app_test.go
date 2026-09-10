@@ -16,8 +16,8 @@ import (
 func testConfig(modules []string) core.Config {
 	return core.Config{
 		Host: "127.0.0.1", Port: 18788, Token: strings.Repeat("x", 32),
-		SkillsRoot: "/tmp/skills", MCPURL: "http://127.0.0.1:19090/mcp",
-		MCPTimeoutSeconds: 5, ObsidianMCPCommand: "/bin/true", MemosMCPCommand: "/bin/true",
+		SkillsRoot: "/tmp/skills", MCPDiscoveryURL: "http://127.0.0.1:19091/config_dump",
+		MCPTimeoutSeconds:    5,
 		MemoryTimeoutSeconds: 5, WorkDBPath: "/tmp/work-test.sqlite3", MaxOutputChars: 120000,
 		Modules: modules,
 	}

@@ -2,8 +2,10 @@ package shared_mcp
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"sort"
 	"strings"
@@ -13,11 +15,89 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-const Version = "1.0.0"
+const Version = "1.2.0"
 
 type Transport interface {
 	ListTools(context.Context) ([]*mcp.Tool, error)
 	CallTool(context.Context, string, map[string]any) (*mcp.CallToolResult, error)
+}
+
+type RouteDiscovery interface {
+	Endpoints(context.Context) ([]string, error)
+}
+
+type adminRouteDiscovery struct {
+	endpoint string
+}
+
+func NewAdminRouteDiscovery(endpoint string) RouteDiscovery {
+	return &adminRouteDiscovery{endpoint: endpoint}
+}
+
+type configDump struct {
+	Binds []struct {
+		Address   string `json:"address"`
+		Listeners map[string]struct {
+			Routes map[string]struct {
+				Matches []struct {
+					Path struct {
+						Exact string `json:"exact"`
+					} `json:"path"`
+				} `json:"matches"`
+			} `json:"routes"`
+		} `json:"listeners"`
+	} `json:"binds"`
+}
+
+func (d *adminRouteDiscovery) Endpoints(ctx context.Context) ([]string, error) {
+	if d == nil || strings.TrimSpace(d.endpoint) == "" {
+		return nil, fmt.Errorf("MCP discovery endpoint is not configured")
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, d.endpoint, nil)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return nil, fmt.Errorf("MCP discovery returned HTTP %d", resp.StatusCode)
+	}
+	var dump configDump
+	if err := json.NewDecoder(resp.Body).Decode(&dump); err != nil {
+		return nil, err
+	}
+	seen := map[string]bool{}
+	endpoints := []string{}
+	for _, bind := range dump.Binds {
+		_, port, err := net.SplitHostPort(bind.Address)
+		if err != nil || port == "" {
+			continue
+		}
+		for _, listener := range bind.Listeners {
+			for _, route := range listener.Routes {
+				for _, match := range route.Matches {
+					path := match.Path.Exact
+					slug := strings.TrimPrefix(path, "/mcp/")
+					if !strings.HasPrefix(path, "/mcp/") || slug == "" || strings.Contains(slug, "/") {
+						continue
+					}
+					endpoint := "http://127.0.0.1:" + port + path
+					if !seen[endpoint] {
+						seen[endpoint] = true
+						endpoints = append(endpoints, endpoint)
+					}
+				}
+			}
+		}
+	}
+	sort.Strings(endpoints)
+	if len(endpoints) == 0 {
+		return nil, fmt.Errorf("no dedicated MCP routes discovered")
+	}
+	return endpoints, nil
 }
 
 type sdkTransport struct {
@@ -83,17 +163,18 @@ func (t *sdkTransport) CallTool(ctx context.Context, name string, arguments map[
 }
 
 type Runtime struct {
-	Primary           Transport
-	Optional          []Transport
-	PrimaryEndpoint   string
-	OptionalEndpoints []string
+	Discovery         RouteDiscovery
+	DiscoveryEndpoint string
+	NewTransport      func(string) Transport
 	Timeout           time.Duration
 	MaxOutput         int
 }
 
 type ResolvedTool struct {
-	Tool  *mcp.Tool
-	owner Transport
+	Tool         *mcp.Tool
+	UpstreamName string
+	Route        string
+	owner        Transport
 }
 
 func (r *ResolvedTool) ReadOnly() bool {
@@ -102,14 +183,10 @@ func (r *ResolvedTool) ReadOnly() bool {
 
 func New(config core.Config) *Runtime {
 	clientName := fmt.Sprintf("codexpro-bridge-%d", config.Port)
-	optional := make([]Transport, 0, len(config.OptionalURLs))
-	for _, endpoint := range config.OptionalURLs {
-		optional = append(optional, NewSDKTransport(endpoint, clientName))
-	}
 	return &Runtime{
-		Primary: NewSDKTransport(config.MCPURL, clientName), Optional: optional,
-		PrimaryEndpoint: config.MCPURL, OptionalEndpoints: append([]string(nil), config.OptionalURLs...),
-		Timeout: time.Duration(config.MCPTimeoutSeconds) * time.Second, MaxOutput: config.MaxOutputChars,
+		Discovery: NewAdminRouteDiscovery(config.MCPDiscoveryURL), DiscoveryEndpoint: config.MCPDiscoveryURL,
+		NewTransport: func(endpoint string) Transport { return NewSDKTransport(endpoint, clientName) },
+		Timeout:      time.Duration(config.MCPTimeoutSeconds) * time.Second, MaxOutput: config.MaxOutputChars,
 	}
 }
 
@@ -135,34 +212,119 @@ func isBridgeError(err error) bool {
 	return ok
 }
 
-func (r *Runtime) catalog(parent context.Context) ([]*mcp.Tool, []Transport, error) {
+func (r *Runtime) activeTransports(ctx context.Context) ([]Transport, []string, error) {
+	if r.Discovery == nil || r.NewTransport == nil {
+		return nil, nil, core.Err("mcp_unavailable", "Shared MCP discovery is unavailable")
+	}
+	endpoints, err := r.Discovery.Endpoints(ctx)
+	if err != nil || len(endpoints) == 0 {
+		log.Printf("shared_mcp discovery_failed endpoint=%s error=%v", r.DiscoveryEndpoint, err)
+		return nil, nil, core.Err("mcp_unavailable", "Shared MCP route discovery is unavailable")
+	}
+	transports := make([]Transport, 0, len(endpoints))
+	for _, endpoint := range endpoints {
+		transports = append(transports, r.NewTransport(endpoint))
+	}
+	return transports, endpoints, nil
+}
+
+type catalogEntry struct {
+	tool         *mcp.Tool
+	upstreamName string
+	route        string
+	owner        Transport
+}
+
+func routeSlug(endpoint string) string {
+	const marker = "/mcp/"
+	i := strings.LastIndex(endpoint, marker)
+	if i < 0 {
+		return "route"
+	}
+	slug := strings.Trim(endpoint[i+len(marker):], "/")
+	if slug == "" || strings.Contains(slug, "/") {
+		return "route"
+	}
+	return slug
+}
+
+func (r *Runtime) TransportForRoute(ctx context.Context, slug string) (Transport, error) {
+	slug = strings.TrimSpace(slug)
+	if slug == "" || strings.Contains(slug, "/") || r.Discovery == nil || r.NewTransport == nil {
+		return nil, core.Err("mcp_unavailable", "Shared MCP route is unavailable")
+	}
+	endpoints, err := r.Discovery.Endpoints(ctx)
+	if err != nil {
+		return nil, core.Err("mcp_unavailable", "Shared MCP route discovery is unavailable")
+	}
+	var matched string
+	for _, endpoint := range endpoints {
+		if routeSlug(endpoint) != slug {
+			continue
+		}
+		if matched != "" {
+			return nil, core.Err("mcp_catalog_collision", "Shared MCP route identity is ambiguous")
+		}
+		matched = endpoint
+	}
+	if matched == "" {
+		return nil, core.Err("mcp_unavailable", "Shared MCP route is unavailable")
+	}
+	return r.NewTransport(matched), nil
+}
+
+func (r *Runtime) catalog(parent context.Context) ([]catalogEntry, []string, []string, error) {
 	ctx, cancel := r.withTimeout(parent)
 	defer cancel()
-	tools := []*mcp.Tool{}
-	owners := []Transport{}
-	seen := map[string]bool{}
-	all := append([]Transport{r.Primary}, r.Optional...)
+	all, endpoints, err := r.activeTransports(ctx)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	failed := []string{}
+	succeeded := 0
+	type candidate struct {
+		tool     *mcp.Tool
+		owner    Transport
+		endpoint string
+	}
+	candidates := []candidate{}
+	nameCounts := map[string]int{}
 	for i, transport := range all {
-		items, err := transport.ListTools(ctx)
-		if err != nil {
-			if i > 0 {
-				continue
-			}
-			if isBridgeError(err) {
-				return nil, nil, err
-			}
-			return nil, nil, core.Err("mcp_unavailable", "Shared MCP gateway is unavailable")
+		items, listErr := transport.ListTools(ctx)
+		if listErr != nil {
+			failed = append(failed, endpoints[i])
+			continue
 		}
+		succeeded++
 		for _, tool := range items {
-			if tool == nil || tool.Name == "" || seen[tool.Name] {
+			if tool == nil || tool.Name == "" {
 				continue
 			}
-			seen[tool.Name] = true
-			tools = append(tools, tool)
-			owners = append(owners, transport)
+			candidates = append(candidates, candidate{tool: tool, owner: transport, endpoint: endpoints[i]})
+			nameCounts[tool.Name]++
 		}
 	}
-	return tools, owners, nil
+	if succeeded == 0 {
+		return nil, endpoints, failed, core.Err("mcp_unavailable", "Shared MCP routes are unavailable")
+	}
+	entries := make([]catalogEntry, 0, len(candidates))
+	canonicalSeen := map[string]bool{}
+	for _, candidate := range candidates {
+		upstreamName := candidate.tool.Name
+		canonicalName := upstreamName
+		route := routeSlug(candidate.endpoint)
+		if nameCounts[upstreamName] > 1 {
+			canonicalName = route + "__" + upstreamName
+		}
+		if canonicalSeen[canonicalName] {
+			return nil, endpoints, failed, core.Err("mcp_catalog_collision", "Shared MCP canonical tool names collide across routes")
+		}
+		canonicalSeen[canonicalName] = true
+		toolCopy := *candidate.tool
+		toolCopy.Name = canonicalName
+		entries = append(entries, catalogEntry{tool: &toolCopy, upstreamName: upstreamName, route: route, owner: candidate.owner})
+	}
+	return entries, endpoints, failed, nil
 }
 
 func (r *Runtime) ListTools(ctx context.Context, query string, includeSchema bool, offset, limit int) (map[string]any, error) {
@@ -175,13 +337,14 @@ func (r *Runtime) ListTools(ctx context.Context, query string, includeSchema boo
 	if limit < 1 || limit > 100 {
 		return nil, core.Err("invalid_pagination", "limit must be between 1 and 100")
 	}
-	catalog, _, err := r.catalog(ctx)
+	catalog, endpoints, failed, err := r.catalog(ctx)
 	if err != nil {
 		return nil, err
 	}
 	needle := strings.ToLower(strings.TrimSpace(query))
 	items := make([]map[string]any, 0, len(catalog))
-	for _, tool := range catalog {
+	for _, entry := range catalog {
+		tool := entry.tool
 		if needle != "" && !strings.Contains(strings.ToLower(tool.Name), needle) && !strings.Contains(strings.ToLower(tool.Description), needle) {
 			continue
 		}
@@ -212,21 +375,20 @@ func (r *Runtime) ListTools(ctx context.Context, query string, includeSchema boo
 	return map[string]any{
 		"ok": true, "tools": page, "count": total, "offset": offset,
 		"limit": limit, "next_offset": next, "source": "agentgateway",
+		"route_count": len(endpoints), "degraded": len(failed) > 0, "failed_routes": failed,
 	}, nil
 }
 
 func (r *Runtime) Status(ctx context.Context) map[string]any {
-	catalog, _, err := r.catalog(ctx)
+	catalog, endpoints, failed, err := r.catalog(ctx)
 	if err != nil {
 		return core.ErrorMap(err)
 	}
-	result := map[string]any{
-		"ok": true, "source": "agentgateway", "endpoint": r.PrimaryEndpoint, "tool_count": len(catalog),
+	return map[string]any{
+		"ok": true, "source": "agentgateway", "tool_count": len(catalog),
+		"discovery_endpoint": r.DiscoveryEndpoint, "route_endpoints": endpoints, "route_count": len(endpoints),
+		"degraded": len(failed) > 0, "failed_routes": failed,
 	}
-	if len(r.OptionalEndpoints) > 0 {
-		result["optional_endpoints"] = append([]string(nil), r.OptionalEndpoints...)
-	}
-	return result
 }
 
 func (r *Runtime) CallTool(ctx context.Context, name string, arguments map[string]any) (map[string]any, error) {
@@ -242,7 +404,7 @@ func (r *Runtime) CallTool(ctx context.Context, name string, arguments map[strin
 }
 
 func (r *Runtime) ResolveTools(ctx context.Context, names []string) (map[string]*ResolvedTool, error) {
-	catalog, owners, err := r.catalog(ctx)
+	catalog, _, failed, err := r.catalog(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -255,10 +417,14 @@ func (r *Runtime) ResolveTools(ctx context.Context, names []string) (map[string]
 		wanted[name] = true
 	}
 	resolved := make(map[string]*ResolvedTool, len(wanted))
-	for i, tool := range catalog {
+	for _, entry := range catalog {
+		tool := entry.tool
 		if tool != nil && wanted[tool.Name] {
-			resolved[tool.Name] = &ResolvedTool{Tool: tool, owner: owners[i]}
+			resolved[tool.Name] = &ResolvedTool{Tool: tool, UpstreamName: entry.upstreamName, Route: entry.route, owner: entry.owner}
 		}
+	}
+	if len(resolved) != len(wanted) && len(failed) > 0 {
+		return nil, core.Err("mcp_unavailable", "Shared MCP catalog is degraded; the requested tool may be on an unavailable route")
 	}
 	return resolved, nil
 }
@@ -272,7 +438,11 @@ func (r *Runtime) CallResolved(ctx context.Context, selected *ResolvedTool, argu
 	}
 	callCtx, cancel := r.withTimeout(ctx)
 	defer cancel()
-	result, err := selected.owner.CallTool(callCtx, selected.Tool.Name, arguments)
+	upstreamName := selected.UpstreamName
+	if upstreamName == "" {
+		upstreamName = selected.Tool.Name
+	}
+	result, err := selected.owner.CallTool(callCtx, upstreamName, arguments)
 	if err != nil {
 		if isBridgeError(err) {
 			return nil, err
@@ -284,6 +454,6 @@ func (r *Runtime) CallResolved(ctx context.Context, selected *ResolvedTool, argu
 
 func (r *Runtime) Compatibility() map[string]any {
 	return map[string]any{
-		"ok": true, "transport": "streamable-http", "source": "agentgateway", "endpoint": r.PrimaryEndpoint,
+		"ok": true, "transport": "streamable-http", "source": "agentgateway", "discovery_endpoint": r.DiscoveryEndpoint,
 	}
 }
