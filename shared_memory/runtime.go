@@ -13,7 +13,7 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-const Version = "1.2.0"
+const Version = "1.2.1"
 
 var memorySignal = regexp.MustCompile(`(?i)(\bremember\b|\bmemory\b|\brecall\b|\bprevious(?:ly)?\b|\bprior\b|\bhistory\b|\bknowledge\s*base\b|\bsecond\s*brain\b|\bpreferences?\b|记忆|回忆|之前|以前|过去|历史|第二大脑|知识库|偏好|上次|此前|先前|说过|聊过)`)
 
@@ -93,7 +93,15 @@ func (r *Runtime) withTimeout(parent context.Context) (context.Context, context.
 	if d <= 0 {
 		d = 180 * time.Second
 	}
-	return context.WithTimeout(parent, d)
+	// Memory calls reuse Shared MCP transports, so outbound MCP sessions must
+	// not inherit transport/session values from the inbound Bridge MCP handler.
+	// Preserve only a tighter caller deadline and start from a clean context.
+	if deadline, ok := parent.Deadline(); ok {
+		if remaining := time.Until(deadline); remaining > 0 && remaining < d {
+			d = remaining
+		}
+	}
+	return context.WithTimeout(context.Background(), d)
 }
 
 func (r *Runtime) sourceNames() []string {

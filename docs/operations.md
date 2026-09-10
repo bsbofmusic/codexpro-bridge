@@ -23,11 +23,11 @@
 - Dynamic provider config: `/home/agent/.config/codexpro-bridge/providers.env`
 - Secret auth env: `/home/agent/.config/codexpro-bridge/env`
 - Skills: Skills Manager
-- General shared MCP: AgentGateway Core + zero or more optional AgentGateway endpoints
-- Memory: registered direct memory-provider transports; production currently uses neutral Obsidian/MemOS wrappers
+- General shared MCP: dedicated AgentGateway `/mcp/<name>` routes discovered dynamically from the loopback admin `config_dump`
+- Memory: semantic source registry only; MemOS/Obsidian transport reuses the same dynamically discovered Shared MCP runtime/routes
 - Workspace execution: official CodexPro/CyberKate
 
-The systemd unit owns Bridge process settings only. Concrete Skills/MCP/Memory provider paths/endpoints belong in `providers.env`, not in the unit.
+The systemd unit owns Bridge process settings only. Shared-owner discovery roots such as the Skills root and AgentGateway discovery URL belong in `providers.env`; per-route or per-Memory command inventories must not be copied there.
 
 ## Provider changes
 

@@ -19,13 +19,18 @@ func (d memoryDiscovery) Endpoints(context.Context) ([]string, error) {
 	return append([]string(nil), d.endpoints...), nil
 }
 
+type memoryContextKey struct{}
+
 type memoryFake struct {
-	tools      []*mcp.Tool
-	listErr    error
-	callErr    error
-	lastTool   string
-	lastArgs   map[string]any
-	callResult *mcp.CallToolResult
+	tools            []*mcp.Tool
+	listErr          error
+	callErr          error
+	lastTool         string
+	lastArgs         map[string]any
+	lastContextValue any
+	lastDeadline     time.Time
+	hasDeadline      bool
+	callResult       *mcp.CallToolResult
 }
 
 func (f *memoryFake) ListTools(context.Context) ([]*mcp.Tool, error) {
@@ -35,8 +40,10 @@ func (f *memoryFake) ListTools(context.Context) ([]*mcp.Tool, error) {
 	return f.tools, nil
 }
 
-func (f *memoryFake) CallTool(_ context.Context, name string, args map[string]any) (*mcp.CallToolResult, error) {
+func (f *memoryFake) CallTool(ctx context.Context, name string, args map[string]any) (*mcp.CallToolResult, error) {
 	f.lastTool, f.lastArgs = name, args
+	f.lastContextValue = ctx.Value(memoryContextKey{})
+	f.lastDeadline, f.hasDeadline = ctx.Deadline()
 	if f.callErr != nil {
 		return nil, f.callErr
 	}
@@ -111,6 +118,27 @@ func TestMemorySearchMapsToCanonicalUpstreamTools(t *testing.T) {
 	}
 	if memos.lastArgs["memory_limit_number"] != 4 || memos.lastArgs["conversation_first_message"] != "first message" {
 		t.Fatalf("memos args drifted: %#v", memos.lastArgs)
+	}
+}
+
+func TestOutboundMemoryCallDropsInboundContextValuesAndKeepsDeadline(t *testing.T) {
+	fake := &memoryFake{}
+	r := &Runtime{Transports: map[string]shared_mcp.Transport{"memos": fake}, Timeout: time.Second}
+	parent := context.WithValue(context.Background(), memoryContextKey{}, "inbound-session")
+	parent, cancel := context.WithTimeout(parent, 100*time.Millisecond)
+	defer cancel()
+
+	if _, err := r.CallTool(parent, "memos", "search_memory", map[string]any{"query": "x"}); err != nil {
+		t.Fatal(err)
+	}
+	if fake.lastContextValue != nil {
+		t.Fatalf("inbound context value leaked into outbound memory transport: %#v", fake.lastContextValue)
+	}
+	if !fake.hasDeadline {
+		t.Fatal("outbound memory transport lost caller deadline")
+	}
+	if remaining := time.Until(fake.lastDeadline); remaining <= 0 || remaining > 150*time.Millisecond {
+		t.Fatalf("unexpected outbound deadline remaining: %v", remaining)
 	}
 }
 

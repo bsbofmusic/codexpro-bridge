@@ -1,5 +1,12 @@
 # Changelog
 
+## 3.1.6
+
+- Fixed `shared_memory` nested MCP calls so they start from a clean outbound context, matching the existing `shared_mcp` transport rule. This prevents inbound Bridge MCP session metadata from leaking into MemOS/Obsidian `initialize` requests and causing `session not found` / `mcp_unavailable` failures on real `memory_search` or `memory_call` operations.
+- Preserved only the tighter caller deadline when creating the clean outbound context; no retry, compatibility alias, direct Memory transport, or second MCP path was added.
+- Added regression coverage proving inbound context values are stripped while caller deadlines remain bounded, and bumped the internal `shared_memory` module patch version to `1.2.1`.
+- Public Bridge tool contracts, AgentGateway dynamic route discovery, Work schema 2, and the six-module/14-tool public Bridge surface are unchanged.
+
 ## 3.1.3
 
 - Fixed `shared_skills` routing to honor managed Skill frontmatter `triggers:` as private routing metadata. This lets exact trigger phrases match inside natural Chinese text without changing the public Skill record or MCP tool schema.
